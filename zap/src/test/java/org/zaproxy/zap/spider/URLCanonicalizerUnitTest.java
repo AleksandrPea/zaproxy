@@ -22,11 +22,20 @@ package org.zaproxy.zap.spider;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import org.apache.commons.httpclient.URI;
 import org.apache.commons.httpclient.URIException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.parosproxy.paros.control.Control;
+import org.zaproxy.zap.extension.httpsessions.ExtensionHttpSessions;
+import org.zaproxy.zap.extension.httpsessions.HttpSessionToken;
 import org.zaproxy.zap.spider.SpiderParam.HandleParametersOption;
+import org.zaproxy.zap.utils.ZapXmlConfiguration;
 
 /**
  * This test ensure that nothing was broken in the handling of normal URLs during the implementation
@@ -36,6 +45,21 @@ import org.zaproxy.zap.spider.SpiderParam.HandleParametersOption;
  * before during the spider phase.
  */
 public class URLCanonicalizerUnitTest {
+
+    @BeforeEach
+    public void setUp() {
+        Control.initSingletonForTesting();
+        ExtensionHttpSessions extensionHttpSessions = new ExtensionHttpSessions();
+        extensionHttpSessions.getParam().load(mock(ZapXmlConfiguration.class));
+        extensionHttpSessions
+                .getParam()
+                .setDefaultTokens(
+                        Arrays.asList(
+                                new HttpSessionToken("jsessionid"),
+                                new HttpSessionToken("phpsessid"),
+                                new HttpSessionToken("aspsessionid")));
+        Control.getSingleton().getExtensionLoader().addExtension(extensionHttpSessions);
+    }
 
     @Test
     public void shouldRemoveDefaultPortOfHttpUriWhenCanonicalizing() {
@@ -113,7 +137,9 @@ public class URLCanonicalizerUnitTest {
         };
         for (int i = 0; i < relativeURIs.length; i++) {
             // When
-            String canonicalizedUri = URLCanonicalizer.getCanonicalURL(relativeURIs[i], baseURI);
+            String canonicalizedUri =
+                    URLCanonicalizer.getCanonicalURL(
+                            relativeURIs[i], baseURI, Collections.emptySet());
             // Then
             assertThat(canonicalizedUri, canonicalizedUri, is(equalTo(expectedCanonicalURIs[i])));
         }
@@ -230,7 +256,7 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.USE_ALL, false);
+                        uri, HandleParametersOption.USE_ALL, false, Collections.emptySet());
         // Then
         assertThat(
                 cleanedUri, is(equalTo("http://example.com/path/%C3%A1/?par%C3%A2m=v%C3%A3lue")));
@@ -244,7 +270,7 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.IGNORE_VALUE, false);
+                        uri, HandleParametersOption.IGNORE_VALUE, false, Collections.emptySet());
         // Then
         assertThat(cleanedUri, is(equalTo("http://example.com/path/%C3%A1/?par%C3%A2m")));
     }
@@ -257,7 +283,10 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.IGNORE_COMPLETELY, false);
+                        uri,
+                        HandleParametersOption.IGNORE_COMPLETELY,
+                        false,
+                        Collections.emptySet());
         // Then
         assertThat(cleanedUri, is(equalTo("http://example.com/path/%C3%A1/")));
     }
@@ -271,7 +300,7 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.USE_ALL, false);
+                        uri, HandleParametersOption.USE_ALL, false, Collections.emptySet());
         // Then
         assertThat(
                 cleanedUri,
@@ -287,7 +316,7 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.IGNORE_VALUE, false);
+                        uri, HandleParametersOption.IGNORE_VALUE, false, Collections.emptySet());
         // Then
         assertThat(cleanedUri, is(equalTo("http://example.com/path/?par%26am2&par%3Dam1")));
     }
@@ -301,7 +330,10 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.IGNORE_COMPLETELY, false);
+                        uri,
+                        HandleParametersOption.IGNORE_COMPLETELY,
+                        false,
+                        Collections.emptySet());
         // Then
         assertThat(cleanedUri, is(equalTo("http://example.com/path/")));
     }
@@ -317,7 +349,7 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.USE_ALL, false);
+                        uri, HandleParametersOption.USE_ALL, false, Collections.emptySet());
         // Then
         assertThat(
                 cleanedUri,
@@ -338,7 +370,7 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.IGNORE_VALUE, false);
+                        uri, HandleParametersOption.IGNORE_VALUE, false, Collections.emptySet());
         // Then
         assertThat(cleanedUri, is(equalTo("http://example.com/path/?param1&param2")));
     }
@@ -354,7 +386,10 @@ public class URLCanonicalizerUnitTest {
         // When
         String cleanedUri =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, HandleParametersOption.IGNORE_COMPLETELY, false);
+                        uri,
+                        HandleParametersOption.IGNORE_COMPLETELY,
+                        false,
+                        Collections.emptySet());
         // Then
         assertThat(cleanedUri, is(equalTo("http://example.com/path/")));
     }
@@ -368,7 +403,8 @@ public class URLCanonicalizerUnitTest {
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
                         uri,
                         HandleParametersOption.USE_ALL,
-                        false /* handleODataParametersVisited */);
+                        false /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/myservlet"));
     }
 
@@ -380,7 +416,8 @@ public class URLCanonicalizerUnitTest {
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
                         uri,
                         HandleParametersOption.IGNORE_COMPLETELY,
-                        false /* handleODataParametersVisited */);
+                        false /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/myservlet"));
     }
 
@@ -392,7 +429,8 @@ public class URLCanonicalizerUnitTest {
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
                         uri,
                         HandleParametersOption.IGNORE_VALUE,
-                        false /* handleODataParametersVisited */);
+                        false /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/myservlet"));
     }
 
@@ -404,7 +442,8 @@ public class URLCanonicalizerUnitTest {
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
                         uri,
                         HandleParametersOption.USE_ALL,
-                        false /* handleODataParametersVisited */);
+                        false /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/myservlet?p1=2&p2=myparam"));
     }
 
@@ -416,7 +455,8 @@ public class URLCanonicalizerUnitTest {
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
                         uri,
                         HandleParametersOption.IGNORE_COMPLETELY,
-                        false /* handleODataParametersVisited */);
+                        false /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/myservlet"));
     }
 
@@ -428,7 +468,8 @@ public class URLCanonicalizerUnitTest {
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
                         uri,
                         HandleParametersOption.IGNORE_VALUE,
-                        false /* handleODataParametersVisited */);
+                        false /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/myservlet?p1&p2"));
     }
 
@@ -441,13 +482,19 @@ public class URLCanonicalizerUnitTest {
         URI uri = new URI("http", null, "host", 9001, "/app.svc/Book(1)");
         String visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book(1)"));
 
         uri = new URI("http", null, "host", 9001, "/app.svc/Book(1)/Author");
         visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book(1)/Author"));
     }
 
@@ -458,13 +505,19 @@ public class URLCanonicalizerUnitTest {
         URI uri = new URI("http", null, "host", 9001, "/app.svc/Book(1)");
         String visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book()"));
 
         uri = new URI("http", null, "host", 9001, "/app.svc/Book(1)/Author");
         visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book()/Author"));
     }
 
@@ -475,13 +528,19 @@ public class URLCanonicalizerUnitTest {
         URI uri = new URI("http", null, "host", 9001, "/app.svc/Book(1)");
         String visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book()"));
 
         uri = new URI("http", null, "host", 9001, "/app.svc/Book(1)/Author");
         visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book()/Author"));
     }
 
@@ -492,13 +551,19 @@ public class URLCanonicalizerUnitTest {
         URI uri = new URI("http", null, "host", 9001, "/app.svc/Book(title='dummy',year=2012)");
         String visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book(title='dummy',year=2012)"));
 
         uri = new URI("http", null, "host", 9001, "/app.svc/Book(title='dummy',year=2012)/Author");
         visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book(title='dummy',year=2012)/Author"));
     }
 
@@ -509,13 +574,19 @@ public class URLCanonicalizerUnitTest {
         URI uri = new URI("http", null, "host", 9001, "/app.svc/Book(title='dummy',year=2012)");
         String visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book()"));
 
         uri = new URI("http", null, "host", 9001, "/app.svc/Book(title='dummy',year=2012)/Author");
         visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book()/Author"));
     }
 
@@ -526,13 +597,76 @@ public class URLCanonicalizerUnitTest {
         URI uri = new URI("http", null, "host", 9001, "/app.svc/Book(title='dummy',year=2012)");
         String visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book(title,year)"));
 
         uri = new URI("http", null, "host", 9001, "/app.svc/Book(title='dummy',year=2012)/Author");
         visitedURI =
                 URLCanonicalizer.buildCleanedParametersURIRepresentation(
-                        uri, spiderOption, true /* handleODataParametersVisited */);
+                        uri,
+                        spiderOption,
+                        true /* handleODataParametersVisited */,
+                        Collections.emptySet());
         assertThat(visitedURI, is("http://host:9001/app.svc/Book(title,year)/Author"));
+    }
+
+    @Test
+    public void shouldSkipIrrelevantQueryParametersWhenCanonicalizing() throws URIException {
+        // Given
+        String uri =
+                new URI("http://example.com/?name1=value1&name2=value2&name3=value3", true)
+                        .toString();
+        // When
+        String canonicalizedUri =
+                URLCanonicalizer.getCanonicalURL(
+                        uri, null, new HashSet<>(Arrays.asList("name1", "name3")));
+        // Then
+        assertThat(canonicalizedUri, is(equalTo("http://example.com/?name2=value2")));
+    }
+
+    @Test
+    public void shouldSkipSessionTokensWhenCanonicalizing() throws URIException {
+        // Given
+        String uri =
+                new URI("http://example.com/?jsessionid=id1&phpsessid=id2&aspsessionid=id3", true)
+                        .toString();
+        // When
+        String canonicalizedUri =
+                URLCanonicalizer.getCanonicalURL(uri, null, Collections.emptySet());
+        // Then
+        assertThat(canonicalizedUri, is(equalTo("http://example.com/")));
+    }
+
+    @Test
+    public void shouldSkipIrrelevantQueryParametersWhenCleaningParametersIn_IGNORE_VALUE_mode()
+            throws URIException {
+        // Given
+        URI uri = new URI("http://example.com/?name1=value1&name2=value2&name3=value3", true);
+        // When
+        String cleanedUri =
+                URLCanonicalizer.buildCleanedParametersURIRepresentation(
+                        uri,
+                        HandleParametersOption.IGNORE_VALUE,
+                        false,
+                        new HashSet<>(Arrays.asList("name1", "name3")));
+        // Then
+        assertThat(cleanedUri, is(equalTo("http://example.com/?name2")));
+    }
+
+    @Test
+    public void shouldSkipSessionTokensWhenCleaningParametersIn_IGNORE_VALUE_mode()
+            throws URIException {
+        // Given
+        URI uri =
+                new URI("http://example.com/?jsessionid=id1&phpsessid=id2&aspsessionid=id3", true);
+        // When
+        String cleanedUri =
+                URLCanonicalizer.buildCleanedParametersURIRepresentation(
+                        uri, HandleParametersOption.IGNORE_VALUE, false, Collections.emptySet());
+        // Then
+        assertThat(cleanedUri, is(equalTo("http://example.com/")));
     }
 }
